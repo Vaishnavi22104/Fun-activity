@@ -162,9 +162,17 @@
 
         // ── Google Brand Palette for 3D Spheres ──
         const BUBBLE_PALETTE = [
-            '#4285F4', '#EA4335', '#FBBC04', '#34A853',
-            '#9C27B0', '#FF9800', '#009688', '#E91E63',
-            '#00BCD4', '#FF5722', '#3F51B5',
+            '#A2C2F8', // Light Google Blue
+            '#F5A8A0', // Light Google Red
+            '#FDE293', // Light Google Yellow
+            '#A8DAB5', // Light Google Green
+            '#D7AEFB', // Light Google Purple
+            '#FFCC80', // Light Google Orange
+            '#80CBC4', // Light Google Teal
+            '#F48FB1', // Light Google Pink
+            '#80DEEA', // Light Google Cyan
+            '#FFAB91', // Light Google Deep Orange
+            '#9FA8DA'  // Light Google Indigo
         ];
         const CARD_COLORS = ['#4285F4','#EA4335','#FBBC04','#34A853'];
 
@@ -179,14 +187,16 @@
 
         // Helper: Generate 3D sphere gradient
         function sphereGradient(color) {
-            return `radial-gradient(circle at 35% 30%, rgba(255,255,255,0.55) 0%, ${color} 50%, color-mix(in srgb, ${color} 60%, #1a1a1a) 100%)`;
+            return `radial-gradient(circle at 35% 30%, rgba(255,255,255,0.6) 0%, ${color} 50%, color-mix(in srgb, ${color} 75%, #1a1a1a) 100%)`;
         }
 
         // ── Attendees ──
         onValue(attendeesRef, snap => {
             const data = snap.val();
             if (!data) { bubbles.forEach(b => b.el.remove()); bubbles = []; $count.textContent = '0'; return; }
-            const list = Object.entries(data).map(([k, v]) => ({ id: k, ...v }));
+            const list = Object.entries(data)
+                .map(([k, v]) => ({ id: k, ...v }))
+                .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
             $count.textContent = list.length;
 
             const n = list.length;
@@ -196,16 +206,16 @@
             const incoming = new Set(list.map(a => a.id));
             bubbles = bubbles.filter(b => { if (!incoming.has(b.id)) { b.el.remove(); return false; } return true; });
             const existing = new Set(bubbles.map(b => b.id));
-            bubbles.forEach(b => b.size = baseSize);
 
-            list.forEach(a => {
-                if (!existing.has(a.id)) {
+            list.forEach((a, index) => {
+                const regNumber = index + 1;
+                let b = bubbles.find(x => x.id === a.id);
+                if (!b) {
                     const color = BUBBLE_PALETTE[Math.floor(Math.random() * BUBBLE_PALETTE.length)];
                     const el = document.createElement('div');
                     el.className = 'bubble';
-                    el.textContent = a.name;
                     $canvas.appendChild(el);
-                    bubbles.push({
+                    b = {
                         id: a.id, name: a.name,
                         x: Math.random() * W * 0.7 + W * 0.15,
                         y: H + 70,
@@ -214,8 +224,12 @@
                         size: baseSize, color, el,
                         r: 0, // computed after styling
                         squashTimer: 0, squashAxis: ''
-                    });
+                    };
+                    bubbles.push(b);
                 }
+                b.size = baseSize;
+                b.regNumber = regNumber;
+                b.el.textContent = `#${regNumber}`;
             });
 
             bubbles.forEach(b => {
@@ -226,22 +240,23 @@
         });
 
         function styleBubble(b) {
-            const nameLen = b.name.length;
-            const diam = Math.max(b.size, nameLen * 8 + 30);
-            const fs = Math.max(11, Math.min(16, diam * 0.18));
+            const text = `#${b.regNumber || 1}`;
+            const textLen = text.length;
+            const diam = Math.max(b.size, textLen * 10 + 20);
+            const fs = Math.max(12, Math.min(22, diam * 0.22));
             b.el.style.width = `${diam}px`;
             b.el.style.height = `${diam}px`;
             b.el.style.fontSize = `${fs}px`;
             b.el.style.background = sphereGradient(b.color);
-            b.el.style.color = '#fff';
-            b.el.style.textShadow = '0 1px 3px rgba(0,0,0,0.4)';
+            b.el.style.color = '#1a1a1a';
+            b.el.style.textShadow = 'none';
             b.el.style.border = '3px solid #1a1a1a';
             b.el.style.boxShadow = '4px 4px 0 #1a1a1a';
             b.el.style.padding = '6px';
             b.el.style.lineHeight = '1.1';
             b.el.style.textAlign = 'center';
-            b.el.style.wordBreak = 'break-word';
-            b.el.style.whiteSpace = 'normal';
+            b.el.style.wordBreak = 'keep-all';
+            b.el.style.whiteSpace = 'nowrap';
         }
 
         function resetBubbleStyle(b) {
@@ -249,13 +264,15 @@
         }
 
         function highlightBubble(b) {
-            const diam = Math.max(b.size, b.name.length * 8 + 30);
+            const text = `#${b.regNumber || 1}`;
+            const textLen = text.length;
+            const diam = Math.max(b.size, textLen * 10 + 20);
             b.el.style.width = `${diam}px`;
             b.el.style.height = `${diam}px`;
             b.el.style.background = sphereGradient(b.color);
-            b.el.style.color = '#fff';
+            b.el.style.color = '#1a1a1a';
             b.el.style.border = '3px solid #1a1a1a';
-            b.el.style.boxShadow = `6px 6px 0 #1a1a1a, 0 0 20px 6px ${b.color}66, 0 0 40px 12px ${b.color}33`;
+            b.el.style.boxShadow = `6px 6px 0 #1a1a1a, 0 0 20px 6px ${b.color}99, 0 0 40px 12px ${b.color}66`;
         }
 
         // ── Event State ──
