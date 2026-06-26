@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GDG Cloud Nagpur - Event</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { grotesk: ['Space Grotesk', 'sans-serif'], outfit: ['Outfit', 'sans-serif'] } } } }
+    </script>
+    <style>
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+        html{scroll-behavior:smooth;}
+        body{font-family:'Space Grotesk','Outfit',sans-serif;overflow-x:hidden;background:#FFF8F0;}
+
+        /* Neo Brutal Grid Background */
+        .brutal-bg{
+            background-color:#FFF8F0;
+            background-image:
+                linear-gradient(rgba(26,26,26,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(26,26,26,0.04) 1px, transparent 1px);
+            background-size:40px 40px;
+        }
+
+        #bubble-canvas{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;}
+
+        /* 3D Sphere Bubble */
+        .bubble{
+            position:absolute;
+            font-family:'Space Grotesk','Outfit',sans-serif;
+            font-weight:700;
+            white-space:nowrap;
+            border-radius:50%;
+            aspect-ratio:1;
+            display:flex;align-items:center;justify-content:center;
+            pointer-events:none;
+            will-change:transform,opacity;
+            border:3px solid #1a1a1a;
+            box-shadow:4px 4px 0 #1a1a1a;
+            transition:opacity 0.4s ease;
+            overflow:hidden;
+        }
+        .bubble::before{
+            content:'';position:absolute;
+            top:10%;left:15%;
+            width:30%;height:24%;
+            background:radial-gradient(ellipse,rgba(255,255,255,0.75) 0%,transparent 70%);
+            border-radius:50%;pointer-events:none;
+        }
+        .bubble.no-transition{transition:none !important;}
+
+        .winner-overlay{
+            position:fixed;inset:0;z-index:40;
+            background:rgba(255,248,240,0.97);
+            backdrop-filter:blur(12px);
+            display:flex;flex-direction:column;
+            align-items:center;justify-content:center;
+            opacity:0;transition:opacity 0.6s ease;pointer-events:none;
+        }
+        .winner-overlay.visible{opacity:1;pointer-events:auto;}
+
+        @keyframes cardReveal{
+            0%{opacity:0;transform:translateY(24px) scale(0.92);}
+            70%{transform:translateY(-3px) scale(1.02);}
+            100%{opacity:1;transform:translateY(0) scale(1);}
+        }
+        .winner-card{
+            opacity:0;
+            animation:cardReveal 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards;
+            font-family:'Space Grotesk','Outfit',sans-serif;font-weight:700;
+            border:3px solid #1a1a1a;
+            border-radius:14px;
+            box-shadow:4px 4px 0 #1a1a1a;
+        }
+
+        /* Element Animations */
+        .animate-float { animation: floatAnim 6s ease-in-out infinite; }
+        @keyframes floatAnim {
+            0%, 100% { transform: translateY(0) rotate(-2deg); }
+            50% { transform: translateY(-20px) rotate(2deg); }
+        }
+
+        #live-mascot { transition: all 0.3s ease; }
+        #live-mascot.excited {
+            animation: waveAnim 0.5s ease-in-out infinite alternate;
+            filter: drop-shadow(0 0 40px rgba(66, 133, 244, 0.6));
+        }
+        #live-mascot.revealed {
+            animation: jumpAnim 1.2s ease-in-out infinite;
+        }
+        @keyframes waveAnim {
+            0% { transform: translateY(0) rotate(-10deg) scale(1.1); }
+            100% { transform: translateY(0) rotate(10deg) scale(1.1); }
+        }
+        @keyframes jumpAnim {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-30px) scale(1.05); }
+        }
+
+        @keyframes drawCheck{to{stroke-dashoffset:0;}}
+        @keyframes scaleCircle{0%{transform:scale(0);opacity:0;}60%{transform:scale(1.1);}100%{transform:scale(1);opacity:1;}}
+        .check-circle{animation:scaleCircle 0.5s ease forwards;}
+        .check-mark{stroke-dasharray:50;stroke-dashoffset:50;animation:drawCheck 0.4s 0.35s ease forwards;}
+
+        /* Password modal */
+        .modal-backdrop{
+            position:fixed;inset:0;z-index:50;
+            background:rgba(0,0,0,0.4);backdrop-filter:blur(6px);
+            display:flex;align-items:center;justify-content:center;
+            opacity:0;pointer-events:none;
+            transition:opacity 0.3s ease;
+        }
+        .modal-backdrop.visible{opacity:1;pointer-events:auto;}
+
+        /* Neo Brutal button press effect */
+        .brutal-btn {
+            border: 3px solid #1a1a1a;
+            box-shadow: 4px 4px 0 #1a1a1a;
+            transition: all 0.1s ease;
+        }
+        .brutal-btn:hover {
+            transform: translate(-1px, -1px);
+            box-shadow: 5px 5px 0 #1a1a1a;
+        }
+        .brutal-btn:active {
+            transform: translate(3px, 3px);
+            box-shadow: 0px 0px 0 #1a1a1a;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══ SCREEN 1: HERO + JOIN ═══ -->
+<div id="screen-join" class="brutal-bg">
+    <!-- Hero: Big Logo -->
+    <section class="h-screen flex flex-col items-center justify-center relative px-6 overflow-hidden">
+        <img src="ASSETS/element1.png" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-80 md:w-[36rem] lg:w-[42rem] opacity-70 z-0 pointer-events-none drop-shadow-xl" alt="Cursor Android">
+        <div class="bg-white rounded-[1.2rem] border-[3px] border-[#1a1a1a] shadow-[6px_6px_0_#1a1a1a] p-6 sm:p-8 md:p-14 relative z-10 mb-32 md:mb-20">
+            <img src="ASSETS/transparentGDG.png" alt="GDG Cloud Nagpur" class="w-[18rem] sm:w-[22rem] md:w-[36rem] lg:w-[42rem] object-contain">
+        </div>
+        <a href="#join-section" class="absolute bottom-10 animate-bounce text-[#1a1a1a] hover:text-black flex flex-col items-center gap-2 transition-colors">
+            <span class="text-xs font-black tracking-widest uppercase bg-[#FBBC04] border-[3px] border-[#1a1a1a] shadow-[3px_3px_0_#1a1a1a] px-4 py-1.5 rounded-xl">Scroll Down</span>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.8" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+        </a>
+    </section>
+
+    <!-- Join Section -->
+    <section id="join-section" class="min-h-screen flex flex-col items-center justify-center px-6 py-20 relative overflow-hidden">
+        <h1 class="text-4xl md:text-6xl font-black text-[#1a1a1a] mb-8 text-center relative z-10">
+            Join the <span class="text-[#4285F4]">Cloud</span> <span class="text-[#EA4335]">V</span><span class="text-[#FBBC04]">i</span><span class="text-[#34A853]">b</span><span class="text-[#4285F4]">e</span>
+        </h1>
+        <div class="w-full max-w-md bg-white rounded-[1.2rem] border-[3px] border-[#1a1a1a] shadow-[6px_6px_0_#1a1a1a] p-8 relative z-10">
+            <input id="inp-name" type="text" placeholder="Your full name" autocomplete="off"
+                   class="w-full text-xl md:text-2xl font-semibold text-center px-5 py-4 rounded-xl bg-[#FFF8F0] border-[3px] border-[#1a1a1a] focus:border-[#4285F4] focus:shadow-[4px_4px_0_#4285F4] outline-none transition-all mb-5 placeholder-gray-400">
+            <button id="btn-join"
+                    class="brutal-btn w-full text-xl md:text-2xl font-black text-white py-4 rounded-xl bg-[#4285F4]">
+                Join Now 🚀
+            </button>
+            <p id="msg-error" class="text-[#EA4335] text-center font-bold mt-4 hidden">Please enter your name!</p>
+        </div>
+
+        <!-- Admin Entry Button -->
+        <button id="btn-admin-gate" class="brutal-btn mt-10 px-6 py-3 text-sm font-bold text-[#1a1a1a] bg-white rounded-xl flex items-center gap-2 relative z-10">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            🔒 Event Manager
+        </button>
+
+        <!-- Element 1 at the bottom -->
+        <img src="ASSETS/element1.png" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-80 md:w-[36rem] lg:w-[42rem] opacity-70 z-0 pointer-events-none drop-shadow-xl" alt="Cursor Android">
+    </section>
+</div>
+
+<!-- ═══ SCREEN 2: SUCCESS ═══ -->
+<div id="screen-tick" class="hidden fixed inset-0 z-50 bg-[#FFF8F0] flex flex-col items-center justify-center">
+    <div class="bg-[#34A853] w-40 h-40 rounded-[1.2rem] border-[3px] border-[#1a1a1a] shadow-[6px_6px_0_#1a1a1a] flex items-center justify-center mb-6">
+        <svg class="w-24 h-24" viewBox="0 0 100 100">
+            <path class="check-mark" d="M25 52 L42 68 L75 32" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </div>
+    <p class="text-4xl font-black text-[#1a1a1a]">You're In!</p>
+    <p class="mt-2 text-lg text-gray-600 font-bold">Look at the big screen 🎉</p>
+</div>
+
+<!-- ═══ SCREEN 3: LIVE VIEW ═══ -->
+<div id="screen-live" class="hidden fixed inset-0 brutal-bg flex flex-col">
+    <header class="relative z-30 flex items-center justify-between px-5 py-3 bg-[#FFF8F0] border-b-[3px] border-[#1a1a1a]">
+        <img src="ASSETS/transparentGDG.png" alt="GDG" class="h-10 md:h-14 object-contain">
+        <div class="flex items-center gap-2 bg-[#4285F4] px-5 py-2 rounded-xl border-[3px] border-[#1a1a1a] shadow-[3px_3px_0_#1a1a1a]">
+            <span class="text-base md:text-lg font-bold text-white">Joined</span>
+            <span id="live-count" class="text-xl md:text-2xl font-black text-white">0</span>
+        </div>
+    </header>
+
+    <div id="bubble-canvas" class="flex-1 relative"></div>
+
+    <div id="winner-overlay" class="winner-overlay">
+        <h1 id="overlay-title" class="text-3xl md:text-5xl font-black text-[#1a1a1a] text-center mb-6">🎉 Congratulations! 🎉</h1>
+        <div id="winners-grid" class="flex flex-wrap justify-center items-center max-w-[94vw] max-h-[72vh]"></div>
+    </div>
+
+    <!-- Elements -->
+    <img src="ASSETS/element1.png" id="live-mascot" class="fixed -bottom-6 -left-6 w-56 md:w-[22rem] z-20 pointer-events-none drop-shadow-2xl animate-float hidden" alt="Cursor Android">
+</div>
+
+<!-- ═══ PASSWORD MODAL ═══ -->
+<div id="modal-password" class="modal-backdrop">
+    <div class="bg-white rounded-[1.2rem] border-[3px] border-[#1a1a1a] shadow-[6px_6px_0_#1a1a1a] p-8 w-full max-w-sm mx-4">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-black text-[#1a1a1a]">🔐 Host Login</h2>
+            <button id="btn-modal-close" class="w-10 h-10 flex items-center justify-center rounded-xl border-[3px] border-[#1a1a1a] shadow-[2px_2px_0_#1a1a1a] hover:shadow-[0_0_0_#1a1a1a] hover:translate-x-[2px] hover:translate-y-[2px] bg-white text-[#1a1a1a] transition-all text-xl font-bold">✕</button>
+        </div>
+        <input id="inp-password" type="password" placeholder="Enter password"
+               class="w-full text-lg font-semibold text-center px-5 py-4 rounded-xl bg-[#FFF8F0] border-[3px] border-[#1a1a1a] focus:border-[#4285F4] focus:shadow-[4px_4px_0_#4285F4] outline-none transition-all mb-4 placeholder-gray-400">
+        <p id="msg-wrong-pw" class="text-[#EA4335] text-center font-bold mb-4 hidden">Wrong password!</p>
+        <button id="btn-pw-submit"
+                class="brutal-btn w-full text-lg font-black text-white py-4 rounded-xl bg-[#4285F4]">
+            Unlock
+        </button>
+    </div>
+</div>
+
+<!-- ═══ FIREBASE + ENGINE ═══ -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, push, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const app = initializeApp({
+        apiKey: "AIzaSyDh9kYjMmSigd0q1leHcVcR8i3A0S7XTlo",
+        authDomain: "gdg-cloud-activity-49511.firebaseapp.com",
+        databaseURL: "https://gdg-cloud-activity-49511-default-rtdb.firebaseio.com",
+        projectId: "gdg-cloud-activity-49511",
+        storageBucket: "gdg-cloud-activity-49511.firebasestorage.app",
+        messagingSenderId: "332553451525",
+        appId: "1:332553451525:web:3cc286d13e38483e72c46c"
+    });
+    const db = getDatabase(app);
+    const attendeesRef = ref(db, 'attendees');
+    const stateRef = ref(db, 'eventState');
+
+    const $ = id => document.getElementById(id);
+
+    // ════════════════════════════
+    //  PASSWORD → REDIRECT TO host.html
+    // ════════════════════════════
+    const HOST_PASSWORD = 'gdgcloud';
+
+    $('btn-admin-gate').addEventListener('click', () => {
+        $('modal-password').classList.add('visible');
+        $('inp-password').focus();
+    });
+
+    $('btn-modal-close').addEventListener('click', () => {
+        $('modal-password').classList.remove('visible');
+        $('msg-wrong-pw').classList.add('hidden');
+        $('inp-password').value = '';
+    });
+
+    $('inp-password').addEventListener('keydown', e => { if (e.key === 'Enter') checkPassword(); });
+    $('btn-pw-submit').addEventListener('click', checkPassword);
+
+    function checkPassword() {
+        if ($('inp-password').value === HOST_PASSWORD) {
+            window.location.href = 'host.html';
+        } else {
+            $('msg-wrong-pw').classList.remove('hidden');
+            $('inp-password').value = '';
+            $('inp-password').focus();
+        }
+    }
+
+    // ════════════════════════════
+    //  ATTENDEE JOIN FLOW
+    // ════════════════════════════
+    $('btn-join').addEventListener('click', doJoin);
+    $('inp-name').addEventListener('keydown', e => { if (e.key === 'Enter') doJoin(); });
+
+    async function doJoin() {
+        const name = $('inp-name').value.trim();
+        if (!name) { $('msg-error').classList.remove('hidden'); return; }
+        $('msg-error').classList.add('hidden');
+        $('btn-join').disabled = true; $('btn-join').textContent = 'Joining…';
+
+        try {
+            await push(attendeesRef, { name, timestamp: serverTimestamp() });
+            $('screen-join').classList.add('hidden');
+            $('screen-tick').classList.remove('hidden'); $('screen-tick').classList.add('flex');
+            setTimeout(() => {
+                $('screen-tick').classList.add('hidden'); $('screen-tick').classList.remove('flex');
+                $('screen-live').classList.remove('hidden'); $('screen-live').classList.add('flex');
+                bootEngine();
+            }, 2000);
+        } catch (err) {
+            alert('Could not join.');
+            $('btn-join').disabled = false; $('btn-join').textContent = 'Join Now 🚀';
+        }
+    }
+
+    // ════════════════════════════
+    //  PHYSICS ENGINE (live bubble view)
+    // ════════════════════════════
+    function bootEngine() {
+        const BUBBLE_PALETTE = [
+            '#4285F4','#EA4335','#FBBC04','#34A853',
+            '#9C27B0','#FF9800','#009688','#E91E63',
+            '#00BCD4','#FF5722','#3F51B5',
+        ];
+        const CARD_COLORS = ['#4285F4','#EA4335','#FBBC04','#34A853'];
+
+        const $canvas = $('bubble-canvas'), $overlay = $('winner-overlay');
+        const $grid = document.getElementById('winners-grid');
+        const $count = document.getElementById('live-count');
+        const $title = document.getElementById('overlay-title');
+        const $mascot = document.getElementById('live-mascot');
+        
+        $mascot.classList.remove('hidden');
+
+        let bubbles = [], W = $canvas.clientWidth, H = $canvas.clientHeight;
+        let phase = 'waiting', rouletteTimer = null, winnerIds = new Set();
+        const HEADER = 50;
+        let firstStateEvent = true;
+
+        window.addEventListener('resize', () => { W = $canvas.clientWidth; H = $canvas.clientHeight; });
+
+        function sphereGradient(color) {
+            return `radial-gradient(circle at 35% 30%, rgba(255,255,255,0.55) 0%, ${color} 50%, color-mix(in srgb, ${color} 60%, #1a1a1a) 100%)`;
+        }
+
+        function styleBubble(b) {
+            const nameLen = b.name.length;
+            const diam = Math.max(b.size, nameLen * 6 + 25);
+            const fs = Math.max(9, Math.min(13, diam * 0.17));
+            b.el.style.width = `${diam}px`;
+            b.el.style.height = `${diam}px`;
+            b.el.style.fontSize = `${fs}px`;
+            b.el.style.background = sphereGradient(b.color);
+            b.el.style.color = '#fff';
+            b.el.style.textShadow = '0 1px 3px rgba(0,0,0,0.4)';
+            b.el.style.border = '2px solid #1a1a1a';
+            b.el.style.boxShadow = '3px 3px 0 #1a1a1a';
+            b.el.style.padding = '4px';
+            b.el.style.lineHeight = '1.1';
+            b.el.style.textAlign = 'center';
+            b.el.style.wordBreak = 'break-word';
+            b.el.style.whiteSpace = 'normal';
+        }
+
+        function resetB(b) { styleBubble(b); }
+        function highlightB(b) {
+            const diam = Math.max(b.size, b.name.length * 6 + 25);
+            b.el.style.width = `${diam}px`;
+            b.el.style.height = `${diam}px`;
+            b.el.style.background = sphereGradient(b.color);
+            b.el.style.color = '#fff';
+            b.el.style.border = '2px solid #1a1a1a';
+            b.el.style.boxShadow = `4px 4px 0 #1a1a1a, 0 0 16px 4px ${b.color}55`;
+        }
+
+        onValue(attendeesRef, snap => {
+            const data = snap.val();
+            if (!data) { bubbles.forEach(b => b.el.remove()); bubbles = []; $count.textContent = '0'; return; }
+            const list = Object.entries(data).map(([k, v]) => ({ id: k, ...v }));
+            $count.textContent = list.length;
+            const n = list.length;
+            const baseSize = Math.max(40, Math.min(70, 350 / Math.sqrt(n + 1)));
+            const incoming = new Set(list.map(a => a.id));
+            bubbles = bubbles.filter(b => { if (!incoming.has(b.id)) { b.el.remove(); return false; } return true; });
+            const existing = new Set(bubbles.map(b => b.id));
+            bubbles.forEach(b => b.size = baseSize);
+            list.forEach(a => {
+                if (!existing.has(a.id)) {
+                    const color = BUBBLE_PALETTE[Math.floor(Math.random() * BUBBLE_PALETTE.length)];
+                    const el = document.createElement('div'); el.className = 'bubble'; el.textContent = a.name;
+                    $canvas.appendChild(el);
+                    bubbles.push({
+                        id: a.id, name: a.name,
+                        x: Math.random()*W*0.7+W*0.15, y: H+50,
+                        vx: (Math.random()-0.5)*1.4, vy: -(Math.random()*1.4+0.7),
+                        size: baseSize, color, el, r: 0,
+                        squashTimer: 0, squashAxis: ''
+                    });
+                }
+            });
+            bubbles.forEach(b => {
+                styleBubble(b);
+                const rect = b.el.getBoundingClientRect();
+                b.r = rect.width / 2 + 4;
+            });
+        });
+
+        function handleWaiting() {
+            phase = 'waiting';
+            winnerIds.clear();
+            if (rouletteTimer) { clearInterval(rouletteTimer); rouletteTimer = null; }
+            $overlay.classList.remove('visible');
+            $canvas.style.opacity = '1';
+            $canvas.style.transition = 'opacity 0.6s ease';
+            bubbles.forEach(b => {
+                b.el.classList.remove('no-transition');
+                resetB(b);
+                b.el.style.opacity = '1';
+            });
+            $mascot.className = 'fixed -bottom-6 -left-6 w-56 md:w-[22rem] z-20 pointer-events-none drop-shadow-2xl animate-float';
+        }
+
+        function handleRoulette() {
+            phase = 'roulette';
+            if (rouletteTimer) clearInterval(rouletteTimer);
+            $mascot.classList.add('excited');
+            bubbles.forEach(b => b.el.classList.add('no-transition'));
+            rouletteTimer = setInterval(() => {
+                bubbles.forEach(b => resetB(b));
+                const count = Math.max(2, Math.floor(bubbles.length * 0.25));
+                const shuffled = [...Array(bubbles.length).keys()].sort(() => Math.random() - 0.5);
+                for (let i = 0; i < count; i++) highlightB(bubbles[shuffled[i]]);
+            }, 100);
+        }
+
+        function handleReveal(winners) {
+            phase = 'revealed';
+            if (rouletteTimer) { clearInterval(rouletteTimer); rouletteTimer = null; }
+            winnerIds = new Set(winners.map(w => w.id));
+            $mascot.classList.remove('excited');
+            $mascot.classList.add('revealed');
+            bubbles.forEach(b => b.el.classList.remove('no-transition'));
+            requestAnimationFrame(() => {
+                bubbles.forEach(b => {
+                    if (winnerIds.has(b.id)) { highlightB(b); b.el.style.opacity = '1'; }
+                    else { resetB(b); b.el.style.opacity = '0.08'; b.el.style.boxShadow = 'none'; }
+                });
+            });
+            setTimeout(() => {
+                $canvas.style.transition = 'opacity 0.8s ease'; $canvas.style.opacity = '0';
+                setTimeout(() => {
+                    $grid.innerHTML = '';
+                    const vw = window.innerWidth, vh = window.innerHeight;
+                    const fs = Math.min(vw/28, vh/22, 24);
+                    const padV = Math.max(5, fs*0.3), padH = Math.max(12, fs*0.8);
+                    $grid.style.gap = `${Math.max(6, fs*0.25)}px`;
+                    $title.style.fontSize = `${Math.min(vw/16, vh/12, 40)}px`;
+                    $overlay.classList.add('visible');
+                    winners.forEach((w, i) => {
+                        setTimeout(() => {
+                            const card = document.createElement('div'); card.className = 'winner-card';
+                            const c = CARD_COLORS[i%4];
+                            card.style.background = c;
+                            card.style.color = '#fff';
+                            card.style.padding = `${padV}px ${padH}px`; card.style.fontSize = `${fs}px`;
+                            card.style.textShadow = '0 2px 4px rgba(0,0,0,0.2)';
+                            card.textContent = w.name; $grid.appendChild(card);
+                            confetti({ particleCount: 40, spread: 55, origin: { y: 0.6 }, colors: [c, '#fff'] });
+                        }, i * 280);
+                    });
+                    setTimeout(() => {
+                        const end = Date.now() + 2500;
+                        (function burst() {
+                            confetti({ particleCount: 4, angle: 60, spread: 50, origin: { x: 0 }, colors: CARD_COLORS });
+                            confetti({ particleCount: 4, angle: 120, spread: 50, origin: { x: 1 }, colors: CARD_COLORS });
+                            if (Date.now() < end) requestAnimationFrame(burst);
+                        })();
+                    }, winners.length * 280 + 400);
+                }, 400);
+            }, 3000);
+        }
+
+        onValue(stateRef, snap => {
+            const state = snap.val();
+            if (firstStateEvent) {
+                firstStateEvent = false;
+                if (state && state.phase !== 'waiting') { handleWaiting(); return; }
+            }
+            if (!state || state.phase === 'waiting') handleWaiting();
+            else if (state.phase === 'highlight_roulette') handleRoulette();
+            else if (state.phase === 'winners_revealed') handleReveal(state.list || []);
+        });
+
+        function tick() {
+            bubbles.forEach(b => {
+                if (phase === 'waiting' || phase === 'roulette') {
+                    b.vx += (Math.random() - 0.5) * 0.06;
+                    b.vy += (Math.random() - 0.5) * 0.06;
+                    const cx = W / 2;
+                    const cy = HEADER + (H - HEADER) / 2;
+                    b.vx += (cx - b.x) * 0.0001;
+                    b.vy += (cy - b.y) * 0.0001;
+                }
+                b.vx *= 0.993; b.vy *= 0.993;
+                if (phase === 'revealed' && winnerIds.has(b.id)) {
+                    b.vx += (W/2-b.x)*0.0004; b.vy += (H/2-b.y)*0.0004;
+                }
+                b.x += b.vx; b.y += b.vy;
+            });
+
+            bubbles.forEach(b => {
+                const m = b.r + 6;
+                let bounced = false, axis = '';
+                if (b.x<m){b.x=m;b.vx=Math.abs(b.vx)*0.75;bounced=true;axis='x';}
+                if (b.x>W-m){b.x=W-m;b.vx=-Math.abs(b.vx)*0.75;bounced=true;axis='x';}
+                if (b.y<HEADER+m){b.y=HEADER+m;b.vy=Math.abs(b.vy)*0.75;bounced=true;axis='y';}
+                if (b.y>H-m){b.y=H-m;b.vy=-Math.abs(b.vy)*0.75;bounced=true;axis='y';}
+                if (bounced && Math.abs(axis==='x'?b.vx:b.vy)>0.5){
+                    b.squashTimer=12;b.squashAxis=axis;
+                }
+            });
+
+            for (let iter=0;iter<3;iter++){
+                for (let i=0;i<bubbles.length;i++){
+                    for (let j=i+1;j<bubbles.length;j++){
+                        const a=bubbles[i],bb=bubbles[j];
+                        const dx=bb.x-a.x,dy=bb.y-a.y;
+                        const minDist=a.r+bb.r+4;
+                        const distSq=dx*dx+dy*dy;
+                        if(distSq<minDist*minDist&&distSq>0.01){
+                            const dist=Math.sqrt(distSq);
+                            const nx=dx/dist,ny=dy/dist;
+                            const overlap=minDist-dist;
+                            a.x-=nx*overlap*0.52;a.y-=ny*overlap*0.52;
+                            bb.x+=nx*overlap*0.52;bb.y+=ny*overlap*0.52;
+                            const dvx=a.vx-bb.vx,dvy=a.vy-bb.vy;
+                            const dot=dvx*nx+dvy*ny;
+                            if(dot>0){
+                                a.vx-=nx*dot*0.5;a.vy-=ny*dot*0.5;
+                                bb.vx+=nx*dot*0.5;bb.vy+=ny*dot*0.5;
+                                a.vx-=nx*0.15;a.vy-=ny*0.15;
+                                bb.vx+=nx*0.15;bb.vy+=ny*0.15;
+                            }
+                            if(Math.abs(dot)>0.8){
+                                a.squashTimer=8;a.squashAxis=Math.abs(nx)>Math.abs(ny)?'x':'y';
+                                bb.squashTimer=8;bb.squashAxis=Math.abs(nx)>Math.abs(ny)?'x':'y';
+                            }
+                        }
+                    }
+                }
+            }
+
+            bubbles.forEach(b => {
+                let scaleX = 1, scaleY = 1;
+                if (phase === 'revealed') {
+                    const base = winnerIds.has(b.id) ? 1.3 : 0.6;
+                    scaleX = base; scaleY = base;
+                }
+                if (b.squashTimer > 0) {
+                    const t = b.squashTimer / 12;
+                    const squash = 1 + t * 0.15;
+                    const stretch = 1 - t * 0.1;
+                    if (b.squashAxis === 'x') { scaleX *= stretch; scaleY *= squash; }
+                    else { scaleX *= squash; scaleY *= stretch; }
+                    b.squashTimer--;
+                }
+                b.el.style.transform = `translate3d(${b.x}px,${b.y}px,0) translate(-50%,-50%) scaleX(${scaleX}) scaleY(${scaleY})`;
+            });
+            requestAnimationFrame(tick);
+        }
+        tick();
+    }
+</script>
+
+<div class="fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-[100] flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[#FFF8F0] border-[3px] border-[#1a1a1a] shadow-[3px_3px_0_#1a1a1a] text-xs sm:text-sm font-bold text-[#1a1a1a] cursor-default">
+    <span class="text-gray-500">Made with</span>
+    <img src="ASSETS/Google_Antigravity_Logo.svg.png" class="h-4 sm:h-5 object-contain" alt="Google Antigravity">
+</div>
+
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GDG Cloud Nagpur - Event Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { grotesk: ['Space Grotesk', 'sans-serif'], outfit: ['Outfit', 'sans-serif'] } } } }
+    </script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Space Grotesk', 'Outfit', sans-serif; }
+
+        /* Neo Brutal Grid Background */
+        .brutal-bg {
+            background-color: #FFF8F0;
+            background-image:
+                linear-gradient(rgba(26,26,26,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(26,26,26,0.04) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .animate-float {
+            animation: floatAnim 6s ease-in-out infinite;
+        }
+        @keyframes floatAnim {
+            0%, 100% { transform: translateY(0) rotate(-2deg); }
+            50% { transform: translateY(-20px) rotate(2deg); }
+        }
+
+        /* Neo Brutal button press effect */
+        .brutal-btn {
+            border: 3px solid #1a1a1a;
+            box-shadow: 4px 4px 0 #1a1a1a;
+            transition: all 0.1s ease;
+        }
+        .brutal-btn:hover {
+            transform: translate(-1px, -1px);
+            box-shadow: 5px 5px 0 #1a1a1a;
+        }
+        .brutal-btn:active {
+            transform: translate(3px, 3px);
+            box-shadow: 0px 0px 0 #1a1a1a;
+        }
+    </style>
+</head>
+<body class="brutal-bg min-h-screen flex flex-col items-center justify-start sm:justify-center p-6 relative overflow-x-hidden overflow-y-auto">
+    <img src="ASSETS/element1.png" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-[22rem] md:w-[32rem] z-0 pointer-events-none drop-shadow-2xl opacity-70 animate-float" alt="Cursor Android">
+    
+    <!-- Neo Brutal Card -->
+    <div class="bg-white rounded-[1.2rem] border-[3px] border-[#1a1a1a] shadow-[6px_6px_0_#1a1a1a] p-8 sm:p-10 md:p-14 w-full max-w-md text-center relative z-10">
+        <img src="ASSETS/transparentGDG.png" class="h-14 sm:h-16 md:h-20 mx-auto mb-5 object-contain" alt="GDG Logo">
+        <h1 class="text-xl sm:text-2xl md:text-3xl font-black text-[#1a1a1a] mb-6 sm:mb-8">🔒 Event Manager</h1>
+
+        <!-- Live Counter -->
+        <div class="bg-[#4285F4] rounded-xl border-[3px] border-[#1a1a1a] shadow-[4px_4px_0_#1a1a1a] py-5 mb-6">
+            <p class="text-base font-bold text-white/80 mb-1">Live Attendees</p>
+            <p id="counter" class="text-5xl md:text-6xl font-black text-white">0</p>
+        </div>
+
+        <!-- Current State Indicator -->
+        <div id="state-badge" class="inline-flex items-center gap-2 bg-[#34A853] text-white px-5 py-2 rounded-xl border-[3px] border-[#1a1a1a] shadow-[3px_3px_0_#1a1a1a] font-bold text-sm mb-6">
+            <span class="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></span>
+            <span id="state-label">Floating Bubbles</span>
+        </div>
+
+        <!-- Buttons -->
+        <button id="btn-lottery"
+                class="brutal-btn w-full text-lg sm:text-xl md:text-2xl font-black text-white py-4 sm:py-5 rounded-xl bg-[#EA4335] mb-4">
+            🎉 Select 10 Random Winners
+        </button>
+
+        <button id="btn-reset"
+                class="brutal-btn w-full text-lg font-bold text-[#1a1a1a] py-4 rounded-xl bg-[#FBBC04] mb-4">
+            ↻ Reset Screen
+        </button>
+
+        <button id="btn-wipe"
+                class="brutal-btn w-full text-sm font-bold text-[#1a1a1a] py-3 rounded-xl bg-white mb-4">
+            🗑️ Clear All Data & Start Fresh
+        </button>
+
+        <p id="status" class="mt-4 text-sm font-semibold text-gray-500"></p>
+
+        <a href="index.html" class="inline-block mt-4 text-sm font-bold text-[#4285F4] hover:underline transition-colors">← Back to Join Page</a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        const app = initializeApp({
+            apiKey: "AIzaSyDh9kYjMmSigd0q1leHcVcR8i3A0S7XTlo",
+            authDomain: "gdg-cloud-activity-49511.firebaseapp.com",
+            databaseURL: "https://gdg-cloud-activity-49511-default-rtdb.firebaseio.com",
+            projectId: "gdg-cloud-activity-49511",
+            storageBucket: "gdg-cloud-activity-49511.firebasestorage.app",
+            messagingSenderId: "332553451525",
+            appId: "1:332553451525:web:3cc286d13e38483e72c46c"
+        });
+        const db = getDatabase(app);
+
+        const attendeesRef = ref(db, 'attendees');
+        const stateRef     = ref(db, 'eventState');
+
+        // Only reset event state to 'waiting' on load. Attendees preserved.
+        set(stateRef, { phase: 'waiting' });
+
+        const $counter    = document.getElementById('counter');
+        const $btnLottery = document.getElementById('btn-lottery');
+        const $btnReset   = document.getElementById('btn-reset');
+        const $btnWipe    = document.getElementById('btn-wipe');
+        const $status     = document.getElementById('status');
+        const $stateLabel = document.getElementById('state-label');
+        const $stateBadge = document.getElementById('state-badge');
+
+        let attendees = [];
+
+        onValue(attendeesRef, snap => {
+            const data = snap.val();
+            if(data) {
+                attendees = Object.entries(data).map(([k,v]) => ({ id:k, ...v }));
+                $counter.textContent = attendees.length;
+            } else {
+                attendees = [];
+                $counter.textContent = '0';
+            }
+        });
+
+        // Track current phase for badge
+        onValue(stateRef, snap => {
+            const state = snap.val();
+            if (!state || state.phase === 'waiting') {
+                $stateLabel.textContent = 'Floating Bubbles';
+                $stateBadge.style.background = '#34A853';
+            } else if (state.phase === 'highlight_roulette') {
+                $stateLabel.textContent = 'Roulette Running…';
+                $stateBadge.style.background = '#FBBC04';
+            } else if (state.phase === 'winners_revealed') {
+                $stateLabel.textContent = 'Winners Displayed';
+                $stateBadge.style.background = '#4285F4';
+            }
+        });
+
+        $btnLottery.addEventListener('click', async () => {
+            if(attendees.length < 10) {
+                $status.textContent = `⚠️ Need at least 10 attendees! (${attendees.length} joined)`;
+                return;
+            }
+            $btnLottery.disabled = true;
+            $btnLottery.textContent = '⏳ Running…';
+            $status.textContent = 'Roulette in progress…';
+
+            // Phase 1 → Roulette
+            await set(stateRef, { phase: 'highlight_roulette' });
+
+            // ── Fisher-Yates (Knuth) Shuffle for TRUE randomness ──
+            const arr = [...attendees];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            const winners = arr.slice(0, Math.min(10, arr.length));
+
+            // Phase 2 → Reveal after 4s of roulette
+            setTimeout(async () => {
+                await set(stateRef, { phase: 'winners_revealed', list: winners });
+                $btnLottery.disabled = false;
+                $btnLottery.textContent = '🎉 Select 10 Random Winners';
+                $status.textContent = '✅ Winners displayed on all screens!';
+            }, 4000);
+        });
+
+        $btnReset.addEventListener('click', async () => {
+            await set(stateRef, { phase: 'waiting' });
+            $status.textContent = '↻ Screen reset to floating bubbles.';
+        });
+
+        $btnWipe.addEventListener('click', async () => {
+            if (confirm('This will remove ALL attendees and reset everything. Are you sure?')) {
+                await set(attendeesRef, null);
+                await set(stateRef, { phase: 'waiting' });
+                $status.textContent = '🗑️ All data cleared. Fresh start!';
+            }
+        });
+    </script>
+
+<div class="fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-[100] flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[#FFF8F0] border-[3px] border-[#1a1a1a] shadow-[3px_3px_0_#1a1a1a] text-xs sm:text-sm font-bold text-[#1a1a1a] cursor-default">
+    <span class="text-gray-500">Made with</span>
+    <img src="ASSETS/Google_Antigravity_Logo.svg.png" class="h-4 sm:h-5 object-contain" alt="Google Antigravity">
+</div>
+
+</body>
+</html>
