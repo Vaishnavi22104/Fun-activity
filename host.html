@@ -78,6 +78,18 @@
             ↻ Reset Screen
         </button>
 
+        <!-- Dummy Data Controls -->
+        <div class="flex gap-3 mb-4">
+            <button id="btn-add-50"
+                    class="brutal-btn flex-1 text-sm font-bold text-[#1a1a1a] py-3 rounded-xl bg-white">
+                ➕ Add 50 Test Users
+            </button>
+            <button id="btn-add-100"
+                    class="brutal-btn flex-1 text-sm font-bold text-[#1a1a1a] py-3 rounded-xl bg-white">
+                ➕ Add 100 Test Users
+            </button>
+        </div>
+
         <button id="btn-wipe"
                 class="brutal-btn w-full text-sm font-bold text-[#1a1a1a] py-3 rounded-xl bg-white mb-4">
             🗑️ Clear All Data & Start Fresh
@@ -90,7 +102,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+        import { getDatabase, ref, onValue, set, push, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
         const app = initializeApp({
             apiKey: "AIzaSyDh9kYjMmSigd0q1leHcVcR8i3A0S7XTlo",
@@ -186,6 +198,47 @@
                 $status.textContent = '🗑️ All data cleared. Fresh start!';
             }
         });
+
+        const TEST_NAMES = [
+            "Emma", "Liam", "Olivia", "Noah", "Ava", "Oliver", "Sophia", "Elijah", "Isabella", "James",
+            "Mia", "Benjamin", "Charlotte", "Lucas", "Amelia", "Mason", "Harper", "Ethan", "Evelyn", "Alexander",
+            "Abigail", "Henry", "Emily", "Jacob", "Elizabeth", "Michael", "Sofia", "Daniel", "Avery", "Logan",
+            "Ella", "Jackson", "Madison", "Sebastian", "Scarlett", "Jack", "Victoria", "Aiden", "Aria", "Owen",
+            "Grace", "Samuel", "Chloe", "Matthew", "Camila", "Joseph", "Penelope", "Levi", "Riley", "Mateo",
+            "Layla", "David", "Lillian", "John", "Nora", "Wyatt", "Zoey", "Carter", "Mila", "Julian",
+            "Aubrey", "Luke", "Hannah", "Grayson", "Lily", "Isaac", "Addison", "Jayden", "Eleanor", "Theodore",
+            "Natalie", "Gabriel", "Luna", "Ryan", "Savannah", "Asher", "Brooklyn", "Connor", "Leah", "Christian",
+            "Zoe", "Stella", "Hazel", "Vihaan", "Aarav", "Vivaan", "Arjun", "Aditya", "Sai", "Dev"
+        ];
+
+        async function addDummyUsers(count) {
+            $status.textContent = `⏳ Adding ${count} dummy attendees...`;
+            const batch = {};
+            const baseTime = Date.now();
+            const startIdx = attendees.length + 1;
+            
+            for (let i = 0; i < count; i++) {
+                const name = TEST_NAMES[i % TEST_NAMES.length] + " (Test " + (startIdx + i) + ")";
+                const newKeyRef = push(attendeesRef);
+                const key = newKeyRef.key;
+                
+                batch[key] = {
+                    name: name,
+                    timestamp: baseTime + i
+                };
+            }
+
+            try {
+                await update(attendeesRef, batch);
+                $status.textContent = `✅ Successfully added ${count} dummy attendees!`;
+            } catch (err) {
+                console.error(err);
+                $status.textContent = `❌ Failed to add dummy attendees.`;
+            }
+        }
+
+        document.getElementById('btn-add-50').addEventListener('click', () => addDummyUsers(50));
+        document.getElementById('btn-add-100').addEventListener('click', () => addDummyUsers(100));
     </script>
 
 <div class="fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-[100] flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[#FFF8F0] border-[3px] border-[#1a1a1a] shadow-[3px_3px_0_#1a1a1a] text-xs sm:text-sm font-bold text-[#1a1a1a] cursor-default">
