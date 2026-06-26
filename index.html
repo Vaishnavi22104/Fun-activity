@@ -7,7 +7,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script>
         tailwind.config = { theme: { extend: { fontFamily: { grotesk: ['Space Grotesk', 'sans-serif'], outfit: ['Outfit', 'sans-serif'] } } } }
     </script>
@@ -184,27 +183,6 @@
     <p class="mt-2 text-lg text-gray-600 font-bold">Look at the big screen 🎉</p>
 </div>
 
-<!-- ═══ SCREEN 3: LIVE VIEW ═══ -->
-<div id="screen-live" class="hidden fixed inset-0 brutal-bg flex flex-col">
-    <header class="relative z-30 flex items-center justify-between px-5 py-3 bg-[#FFF8F0] border-b-[3px] border-[#1a1a1a]">
-        <img src="ASSETS/transparentGDG.png" alt="GDG" class="h-10 md:h-14 object-contain">
-        <div class="flex items-center gap-2 bg-[#4285F4] px-5 py-2 rounded-xl border-[3px] border-[#1a1a1a] shadow-[3px_3px_0_#1a1a1a]">
-            <span class="text-base md:text-lg font-bold text-white">Joined</span>
-            <span id="live-count" class="text-xl md:text-2xl font-black text-white">0</span>
-        </div>
-    </header>
-
-    <div id="bubble-canvas" class="flex-1 relative"></div>
-
-    <div id="winner-overlay" class="winner-overlay">
-        <h1 id="overlay-title" class="text-3xl md:text-5xl font-black text-[#1a1a1a] text-center mb-6">🎉 Congratulations! 🎉</h1>
-        <div id="winners-grid" class="flex flex-wrap justify-center items-center max-w-[94vw] max-h-[72vh]"></div>
-    </div>
-
-    <!-- Elements -->
-    <img src="ASSETS/element1.png" id="live-mascot" class="fixed -bottom-6 -left-6 w-56 md:w-[22rem] z-20 pointer-events-none drop-shadow-2xl animate-float hidden" alt="Cursor Android">
-</div>
-
 <!-- ═══ PASSWORD MODAL ═══ -->
 <div id="modal-password" class="modal-backdrop">
     <div class="bg-white rounded-[1.2rem] border-[3px] border-[#1a1a1a] shadow-[6px_6px_0_#1a1a1a] p-8 w-full max-w-sm mx-4">
@@ -222,10 +200,10 @@
     </div>
 </div>
 
-<!-- ═══ FIREBASE + ENGINE ═══ -->
+<!-- ═══ FIREBASE + SCRIPT ═══ -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, push, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getDatabase, ref, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
     const app = initializeApp({
         apiKey: "AIzaSyDh9kYjMmSigd0q1leHcVcR8i3A0S7XTlo",
@@ -238,7 +216,6 @@
     });
     const db = getDatabase(app);
     const attendeesRef = ref(db, 'attendees');
-    const stateRef = ref(db, 'eventState');
 
     const $ = id => document.getElementById(id);
 
@@ -287,292 +264,10 @@
             await push(attendeesRef, { name, timestamp: serverTimestamp() });
             $('screen-join').classList.add('hidden');
             $('screen-tick').classList.remove('hidden'); $('screen-tick').classList.add('flex');
-            setTimeout(() => {
-                $('screen-tick').classList.add('hidden'); $('screen-tick').classList.remove('flex');
-                $('screen-live').classList.remove('hidden'); $('screen-live').classList.add('flex');
-                bootEngine();
-            }, 2000);
         } catch (err) {
             alert('Could not join.');
             $('btn-join').disabled = false; $('btn-join').textContent = 'Join Now 🚀';
         }
-    }
-
-    // ════════════════════════════
-    //  PHYSICS ENGINE (live bubble view)
-    // ════════════════════════════
-    function bootEngine() {
-        const BUBBLE_PALETTE = [
-            '#A2C2F8', // Light Google Blue
-            '#F5A8A0', // Light Google Red
-            '#FDE293', // Light Google Yellow
-            '#A8DAB5', // Light Google Green
-            '#D7AEFB', // Light Google Purple
-            '#FFCC80', // Light Google Orange
-            '#80CBC4', // Light Google Teal
-            '#F48FB1', // Light Google Pink
-            '#80DEEA', // Light Google Cyan
-            '#FFAB91', // Light Google Deep Orange
-            '#9FA8DA'  // Light Google Indigo
-        ];
-        const CARD_COLORS = ['#4285F4','#EA4335','#FBBC04','#34A853'];
-
-        const $canvas = $('bubble-canvas'), $overlay = $('winner-overlay');
-        const $grid = document.getElementById('winners-grid');
-        const $count = document.getElementById('live-count');
-        const $title = document.getElementById('overlay-title');
-        const $mascot = document.getElementById('live-mascot');
-        
-        $mascot.classList.remove('hidden');
-
-        let bubbles = [], W = $canvas.clientWidth, H = $canvas.clientHeight;
-        let phase = 'waiting', rouletteTimer = null, winnerIds = new Set();
-        const HEADER = 50;
-        let firstStateEvent = true;
-
-        window.addEventListener('resize', () => { W = $canvas.clientWidth; H = $canvas.clientHeight; });
-
-        function sphereGradient(color) {
-            return `radial-gradient(circle at 35% 30%, rgba(255,255,255,0.6) 0%, ${color} 50%, color-mix(in srgb, ${color} 75%, #1a1a1a) 100%)`;
-        }
-
-        function styleBubble(b) {
-            const text = `#${b.regNumber || 1}`;
-            const textLen = text.length;
-            const diam = Math.max(b.size, textLen * 8 + 18);
-            const fs = Math.max(10, Math.min(18, diam * 0.22));
-            b.el.style.width = `${diam}px`;
-            b.el.style.height = `${diam}px`;
-            b.el.style.fontSize = `${fs}px`;
-            b.el.style.background = sphereGradient(b.color);
-            b.el.style.color = '#1a1a1a';
-            b.el.style.textShadow = 'none';
-            b.el.style.border = '2px solid #1a1a1a';
-            b.el.style.boxShadow = '3px 3px 0 #1a1a1a';
-            b.el.style.padding = '4px';
-            b.el.style.lineHeight = '1.1';
-            b.el.style.textAlign = 'center';
-            b.el.style.wordBreak = 'keep-all';
-            b.el.style.whiteSpace = 'nowrap';
-        }
-
-        function resetB(b) { styleBubble(b); }
-        function highlightB(b) {
-            const text = `#${b.regNumber || 1}`;
-            const textLen = text.length;
-            const diam = Math.max(b.size, textLen * 8 + 18);
-            b.el.style.width = `${diam}px`;
-            b.el.style.height = `${diam}px`;
-            b.el.style.background = sphereGradient(b.color);
-            b.el.style.color = '#1a1a1a';
-            b.el.style.border = '2px solid #1a1a1a';
-            b.el.style.boxShadow = `4px 4px 0 #1a1a1a, 0 0 16px 4px ${b.color}88`;
-        }
-
-        onValue(attendeesRef, snap => {
-            const data = snap.val();
-            if (!data) { bubbles.forEach(b => b.el.remove()); bubbles = []; $count.textContent = '0'; return; }
-            const list = Object.entries(data)
-                .map(([k, v]) => ({ id: k, ...v }))
-                .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-            $count.textContent = list.length;
-            const n = list.length;
-            const baseSize = Math.max(40, Math.min(70, 350 / Math.sqrt(n + 1)));
-            const incoming = new Set(list.map(a => a.id));
-            bubbles = bubbles.filter(b => { if (!incoming.has(b.id)) { b.el.remove(); return false; } return true; });
-            const existing = new Set(bubbles.map(b => b.id));
-            
-            list.forEach((a, index) => {
-                const regNumber = index + 1;
-                let b = bubbles.find(x => x.id === a.id);
-                if (!b) {
-                    const color = BUBBLE_PALETTE[Math.floor(Math.random() * BUBBLE_PALETTE.length)];
-                    const el = document.createElement('div'); el.className = 'bubble';
-                    $canvas.appendChild(el);
-                    b = {
-                        id: a.id, name: a.name,
-                        x: Math.random()*W*0.7+W*0.15, y: H+50,
-                        vx: (Math.random()-0.5)*1.4, vy: -(Math.random()*1.4+0.7),
-                        size: baseSize, color, el, r: 0,
-                        squashTimer: 0, squashAxis: ''
-                    };
-                    bubbles.push(b);
-                }
-                b.size = baseSize;
-                b.regNumber = regNumber;
-                b.el.textContent = `#${regNumber}`;
-            });
-            bubbles.forEach(b => {
-                styleBubble(b);
-                const rect = b.el.getBoundingClientRect();
-                b.r = rect.width / 2 + 4;
-            });
-        });
-
-        function handleWaiting() {
-            phase = 'waiting';
-            winnerIds.clear();
-            if (rouletteTimer) { clearInterval(rouletteTimer); rouletteTimer = null; }
-            $overlay.classList.remove('visible');
-            $canvas.style.opacity = '1';
-            $canvas.style.transition = 'opacity 0.6s ease';
-            bubbles.forEach(b => {
-                b.el.classList.remove('no-transition');
-                resetB(b);
-                b.el.style.opacity = '1';
-            });
-            $mascot.className = 'fixed -bottom-6 -left-6 w-56 md:w-[22rem] z-20 pointer-events-none drop-shadow-2xl animate-float';
-        }
-
-        function handleRoulette() {
-            phase = 'roulette';
-            if (rouletteTimer) clearInterval(rouletteTimer);
-            $mascot.classList.add('excited');
-            bubbles.forEach(b => b.el.classList.add('no-transition'));
-            rouletteTimer = setInterval(() => {
-                bubbles.forEach(b => resetB(b));
-                const count = Math.max(2, Math.floor(bubbles.length * 0.25));
-                const shuffled = [...Array(bubbles.length).keys()].sort(() => Math.random() - 0.5);
-                for (let i = 0; i < count; i++) highlightB(bubbles[shuffled[i]]);
-            }, 100);
-        }
-
-        function handleReveal(winners) {
-            phase = 'revealed';
-            if (rouletteTimer) { clearInterval(rouletteTimer); rouletteTimer = null; }
-            winnerIds = new Set(winners.map(w => w.id));
-            $mascot.classList.remove('excited');
-            $mascot.classList.add('revealed');
-            bubbles.forEach(b => b.el.classList.remove('no-transition'));
-            requestAnimationFrame(() => {
-                bubbles.forEach(b => {
-                    if (winnerIds.has(b.id)) { highlightB(b); b.el.style.opacity = '1'; }
-                    else { resetB(b); b.el.style.opacity = '0.08'; b.el.style.boxShadow = 'none'; }
-                });
-            });
-            setTimeout(() => {
-                $canvas.style.transition = 'opacity 0.8s ease'; $canvas.style.opacity = '0';
-                setTimeout(() => {
-                    $grid.innerHTML = '';
-                    const vw = window.innerWidth, vh = window.innerHeight;
-                    const fs = Math.min(vw/28, vh/22, 24);
-                    const padV = Math.max(5, fs*0.3), padH = Math.max(12, fs*0.8);
-                    $grid.style.gap = `${Math.max(6, fs*0.25)}px`;
-                    $title.style.fontSize = `${Math.min(vw/16, vh/12, 40)}px`;
-                    $overlay.classList.add('visible');
-                    winners.forEach((w, i) => {
-                        setTimeout(() => {
-                            const card = document.createElement('div'); card.className = 'winner-card';
-                            const c = CARD_COLORS[i%4];
-                            card.style.background = c;
-                            card.style.color = '#fff';
-                            card.style.padding = `${padV}px ${padH}px`; card.style.fontSize = `${fs}px`;
-                            card.style.textShadow = '0 2px 4px rgba(0,0,0,0.2)';
-                            card.textContent = w.name; $grid.appendChild(card);
-                            confetti({ particleCount: 40, spread: 55, origin: { y: 0.6 }, colors: [c, '#fff'] });
-                        }, i * 280);
-                    });
-                    setTimeout(() => {
-                        const end = Date.now() + 2500;
-                        (function burst() {
-                            confetti({ particleCount: 4, angle: 60, spread: 50, origin: { x: 0 }, colors: CARD_COLORS });
-                            confetti({ particleCount: 4, angle: 120, spread: 50, origin: { x: 1 }, colors: CARD_COLORS });
-                            if (Date.now() < end) requestAnimationFrame(burst);
-                        })();
-                    }, winners.length * 280 + 400);
-                }, 400);
-            }, 3000);
-        }
-
-        onValue(stateRef, snap => {
-            const state = snap.val();
-            if (firstStateEvent) {
-                firstStateEvent = false;
-                if (state && state.phase !== 'waiting') { handleWaiting(); return; }
-            }
-            if (!state || state.phase === 'waiting') handleWaiting();
-            else if (state.phase === 'highlight_roulette') handleRoulette();
-            else if (state.phase === 'winners_revealed') handleReveal(state.list || []);
-        });
-
-        function tick() {
-            bubbles.forEach(b => {
-                if (phase === 'waiting' || phase === 'roulette') {
-                    b.vx += (Math.random() - 0.5) * 0.06;
-                    b.vy += (Math.random() - 0.5) * 0.06;
-                    const cx = W / 2;
-                    const cy = HEADER + (H - HEADER) / 2;
-                    b.vx += (cx - b.x) * 0.0001;
-                    b.vy += (cy - b.y) * 0.0001;
-                }
-                b.vx *= 0.993; b.vy *= 0.993;
-                if (phase === 'revealed' && winnerIds.has(b.id)) {
-                    b.vx += (W/2-b.x)*0.0004; b.vy += (H/2-b.y)*0.0004;
-                }
-                b.x += b.vx; b.y += b.vy;
-            });
-
-            bubbles.forEach(b => {
-                const m = b.r + 6;
-                let bounced = false, axis = '';
-                if (b.x<m){b.x=m;b.vx=Math.abs(b.vx)*0.75;bounced=true;axis='x';}
-                if (b.x>W-m){b.x=W-m;b.vx=-Math.abs(b.vx)*0.75;bounced=true;axis='x';}
-                if (b.y<HEADER+m){b.y=HEADER+m;b.vy=Math.abs(b.vy)*0.75;bounced=true;axis='y';}
-                if (b.y>H-m){b.y=H-m;b.vy=-Math.abs(b.vy)*0.75;bounced=true;axis='y';}
-                if (bounced && Math.abs(axis==='x'?b.vx:b.vy)>0.5){
-                    b.squashTimer=12;b.squashAxis=axis;
-                }
-            });
-
-            for (let iter=0;iter<3;iter++){
-                for (let i=0;i<bubbles.length;i++){
-                    for (let j=i+1;j<bubbles.length;j++){
-                        const a=bubbles[i],bb=bubbles[j];
-                        const dx=bb.x-a.x,dy=bb.y-a.y;
-                        const minDist=a.r+bb.r+4;
-                        const distSq=dx*dx+dy*dy;
-                        if(distSq<minDist*minDist&&distSq>0.01){
-                            const dist=Math.sqrt(distSq);
-                            const nx=dx/dist,ny=dy/dist;
-                            const overlap=minDist-dist;
-                            a.x-=nx*overlap*0.52;a.y-=ny*overlap*0.52;
-                            bb.x+=nx*overlap*0.52;bb.y+=ny*overlap*0.52;
-                            const dvx=a.vx-bb.vx,dvy=a.vy-bb.vy;
-                            const dot=dvx*nx+dvy*ny;
-                            if(dot>0){
-                                a.vx-=nx*dot*0.5;a.vy-=ny*dot*0.5;
-                                bb.vx+=nx*dot*0.5;bb.vy+=ny*dot*0.5;
-                                a.vx-=nx*0.15;a.vy-=ny*0.15;
-                                bb.vx+=nx*0.15;bb.vy+=ny*0.15;
-                            }
-                            if(Math.abs(dot)>0.8){
-                                a.squashTimer=8;a.squashAxis=Math.abs(nx)>Math.abs(ny)?'x':'y';
-                                bb.squashTimer=8;bb.squashAxis=Math.abs(nx)>Math.abs(ny)?'x':'y';
-                            }
-                        }
-                    }
-                }
-            }
-
-            bubbles.forEach(b => {
-                let scaleX = 1, scaleY = 1;
-                if (phase === 'revealed') {
-                    const base = winnerIds.has(b.id) ? 1.3 : 0.6;
-                    scaleX = base; scaleY = base;
-                }
-                if (b.squashTimer > 0) {
-                    const t = b.squashTimer / 12;
-                    const squash = 1 + t * 0.15;
-                    const stretch = 1 - t * 0.1;
-                    if (b.squashAxis === 'x') { scaleX *= stretch; scaleY *= squash; }
-                    else { scaleX *= squash; scaleY *= stretch; }
-                    b.squashTimer--;
-                }
-                b.el.style.transform = `translate3d(${b.x}px,${b.y}px,0) translate(-50%,-50%) scaleX(${scaleX}) scaleY(${scaleY})`;
-            });
-            requestAnimationFrame(tick);
-        }
-        tick();
     }
 </script>
 
