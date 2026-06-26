@@ -26,7 +26,7 @@
 
         #bubble-canvas{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;z-index:10;}
 
-        /* 3D Sphere Bubble */
+        /* Flat Bubble */
         .bubble{
             position:absolute;
             font-family:'Space Grotesk','Outfit',sans-serif;
@@ -37,18 +37,8 @@
             display:flex;align-items:center;justify-content:center;
             pointer-events:none;
             will-change:transform,opacity;
-            border:3px solid #1a1a1a;
-            box-shadow:4px 4px 0 #1a1a1a;
             transition:opacity 0.4s ease;
             overflow:hidden;
-        }
-        /* Specular highlight */
-        .bubble::before{
-            content:'';position:absolute;
-            top:10%;left:15%;
-            width:30%;height:24%;
-            background:radial-gradient(ellipse,rgba(255,255,255,0.75) 0%,transparent 70%);
-            border-radius:50%;pointer-events:none;
         }
 
         .bubble.no-transition{transition:none !important;}
@@ -162,11 +152,11 @@
 
         // ── Google Brand Palette for 3D Spheres ──
         const BUBBLE_PALETTE = [
-            '#D3ADF7', // Light Lilac/Purple
-            '#FF7875', // Light Coral Red
-            '#FFE58F', // Light Warm Yellow
-            '#A6E1B7', // Light Green
-            '#91D5FF'  // Light Sky Blue
+            '#ab7bf6', // Lilac/Purple
+            '#ff6b6b', // Coral Red
+            '#ffb81c', // Warm Yellow
+            '#52c41a', // Green
+            '#40a9ff'  // Sky Blue
         ];
         const CARD_COLORS = ['#4285F4','#EA4335','#FBBC04','#34A853'];
 
@@ -179,10 +169,7 @@
 
         window.addEventListener('resize', () => { W = window.innerWidth; H = window.innerHeight; });
 
-        // Helper: Generate 3D sphere gradient
-        function sphereGradient(color) {
-            return `radial-gradient(circle at 35% 30%, rgba(255,255,255,0.6) 0%, ${color} 50%, color-mix(in srgb, ${color} 75%, #1a1a1a) 100%)`;
-        }
+        // Flat color fills used instead of sphere gradient
 
         // ── Attendees ──
         onValue(attendeesRef, snap => {
@@ -235,15 +222,15 @@
 
         function styleBubble(b) {
             const diam = b.size;
-            const fs = Math.max(9, Math.min(24, diam * 0.35));
+            const fs = Math.max(9, Math.min(24, diam * 0.38));
             b.el.style.width = `${diam}px`;
             b.el.style.height = `${diam}px`;
             b.el.style.fontSize = `${fs}px`;
-            b.el.style.background = sphereGradient(b.color);
-            b.el.style.color = '#1a1a1a';
+            b.el.style.background = b.color;
+            b.el.style.color = '#ffffff';
             b.el.style.textShadow = 'none';
-            b.el.style.border = '3px solid #1a1a1a';
-            b.el.style.boxShadow = '4px 4px 0 #1a1a1a';
+            b.el.style.border = 'none';
+            b.el.style.boxShadow = 'none';
             b.el.style.padding = '2px';
             b.el.style.lineHeight = '1';
             b.el.style.textAlign = 'center';
@@ -259,10 +246,10 @@
             const diam = b.size;
             b.el.style.width = `${diam}px`;
             b.el.style.height = `${diam}px`;
-            b.el.style.background = sphereGradient(b.color);
-            b.el.style.color = '#1a1a1a';
-            b.el.style.border = '3px solid #1a1a1a';
-            b.el.style.boxShadow = `6px 6px 0 #1a1a1a, 0 0 20px 6px ${b.color}99, 0 0 40px 12px ${b.color}66`;
+            b.el.style.background = b.color;
+            b.el.style.color = '#ffffff';
+            b.el.style.border = 'none';
+            b.el.style.boxShadow = `0 0 24px 8px ${b.color}aa`;
         }
 
         // ── Event State ──
