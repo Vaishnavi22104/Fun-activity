@@ -316,10 +316,18 @@
                 setTimeout(() => {
                     $grid.innerHTML = '';
                     const vw = W, vh = H;
-                    const fs = Math.min(vw / 20, vh / 14, 52);
-                    const padV = Math.max(10, fs * 0.4);
-                    const padH = Math.max(20, fs * 0.9);
-                    const gap = Math.max(10, fs * 0.3);
+                    const maxNameLen = Math.max(...winners.map(w => w.name.length), 10);
+                    
+                    // Calculate base font size dynamically based on longest name to prevent screen overflow
+                    let fs = Math.min(vw / 20, vh / 14, 52);
+                    if (maxNameLen > 12) {
+                        fs = fs * (12 / maxNameLen);
+                    }
+                    fs = Math.max(18, fs); // Cap minimum font size at 18px for legibility
+
+                    const padV = Math.max(8, fs * 0.4);
+                    const padH = Math.max(16, fs * 0.8);
+                    const gap = Math.max(8, fs * 0.3);
                     $title.style.fontSize = `${Math.min(vw / 14, vh / 10, 68)}px`;
                     $grid.style.gap = `${gap}px`;
 
