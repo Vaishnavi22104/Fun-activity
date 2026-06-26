@@ -278,7 +278,7 @@
             const myIndex = keys.indexOf(myId);
             const regNumber = myIndex !== -1 ? (myIndex + 1) : keys.length;
 
-            $('your-number').textContent = `#${regNumber}`;
+            $('your-number').textContent = regNumber;
 
             $('screen-join').classList.add('hidden');
             $('screen-tick').classList.remove('hidden'); $('screen-tick').classList.add('flex');

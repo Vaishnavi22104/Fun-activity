@@ -200,8 +200,8 @@
             $count.textContent = list.length;
 
             const n = list.length;
-            // Sphere size: adapts to crowd
-            const baseSize = Math.max(55, Math.min(100, 480 / Math.sqrt(n + 1)));
+            // Sphere size: adapts to crowd, scales down to 25px for 100+ attendees
+            const baseSize = Math.max(25, Math.min(100, 450 / Math.sqrt(n + 1)));
 
             const incoming = new Set(list.map(a => a.id));
             bubbles = bubbles.filter(b => { if (!incoming.has(b.id)) { b.el.remove(); return false; } return true; });
@@ -229,7 +229,7 @@
                 }
                 b.size = baseSize;
                 b.regNumber = regNumber;
-                b.el.textContent = `#${regNumber}`;
+                b.el.textContent = regNumber;
             });
 
             bubbles.forEach(b => {
@@ -240,10 +240,8 @@
         });
 
         function styleBubble(b) {
-            const text = `#${b.regNumber || 1}`;
-            const textLen = text.length;
-            const diam = Math.max(b.size, textLen * 10 + 20);
-            const fs = Math.max(12, Math.min(22, diam * 0.22));
+            const diam = b.size;
+            const fs = Math.max(9, Math.min(24, diam * 0.35));
             b.el.style.width = `${diam}px`;
             b.el.style.height = `${diam}px`;
             b.el.style.fontSize = `${fs}px`;
@@ -252,8 +250,8 @@
             b.el.style.textShadow = 'none';
             b.el.style.border = '3px solid #1a1a1a';
             b.el.style.boxShadow = '4px 4px 0 #1a1a1a';
-            b.el.style.padding = '6px';
-            b.el.style.lineHeight = '1.1';
+            b.el.style.padding = '2px';
+            b.el.style.lineHeight = '1';
             b.el.style.textAlign = 'center';
             b.el.style.wordBreak = 'keep-all';
             b.el.style.whiteSpace = 'nowrap';
@@ -264,9 +262,7 @@
         }
 
         function highlightBubble(b) {
-            const text = `#${b.regNumber || 1}`;
-            const textLen = text.length;
-            const diam = Math.max(b.size, textLen * 10 + 20);
+            const diam = b.size;
             b.el.style.width = `${diam}px`;
             b.el.style.height = `${diam}px`;
             b.el.style.background = sphereGradient(b.color);
