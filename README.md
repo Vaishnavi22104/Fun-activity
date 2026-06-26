@@ -6,9 +6,9 @@ A playful, interactive, real-time web application built for GDG Cloud events. At
 
 ## 🚀 Live Demo Links
 Anyone visiting this repository can open and test the application instantly:
-* 📱 **Attendee Join Screen (Mobile):** [gdg-cloud-activity.vercel.app](https://gdg-cloud-activity.vercel.app)
-* 🖥️ **Presentation Screen (Projector View):** [gdg-cloud-activity.vercel.app/projector.html](https://gdg-cloud-activity.vercel.app/projector.html)
-* 🔒 **Event Manager Dashboard (Admin):** [gdg-cloud-activity.vercel.app/host.html](https://gdg-cloud-activity.vercel.app/host.html)  
+* 📱 **Attendee Join Screen (Mobile):** [fun-activity-roan.vercel.app](https://fun-activity-roan.vercel.app)
+* 🖥️ **Presentation Screen (Projector View):** [fun-activity-roan.vercel.app/projector.html](https://fun-activity-roan.vercel.app/projector.html)
+* 🔒 **Event Manager Dashboard (Admin):** [fun-activity-roan.vercel.app/host.html](https://fun-activity-roan.vercel.app/host.html)  
   *(Default Host Password: `gdgcloud`)*
 
 ---
@@ -46,8 +46,8 @@ Anyone visiting this repository can open and test the application instantly:
 ## 🔧 Local Setup & Run
 1. Clone this repository:
    ```bash
-   git clone https://github.com/Vaishnavi22104/gdg-cloud-activity.git
-   cd gdg-cloud-activity
+   git clone https://github.com/Vaishnavi22104/Fun-activity.git
+   cd Fun-activity
    ```
 2. Run a local server (e.g., using Python or Node):
    * **Python:** `python -m http.server 8000`
